@@ -1,27 +1,112 @@
-Aluno: Leonardo Chiao & Lucas Volkweis 
-Relatório de atividade -
-Trabalho Prático 1 - Investigação Digital
-Outubro, 2024
+# 🔍 Análise Forense de Imagens: Detecção de Manipulações via Amplificação de Ruído
 
- 1. Introdução: apresentação do problema:
-Atualmente tem sido cada vez mais difícil confirmar em imagens: há uma grande quantidade de técnicas de manipulação de imagens, desde edição manual até técnicas envolvendo algoritmos de aprendizagem de máquina. A utilização maliciosa dessas técnicas, especialmente para a produção de fake news, tem sido cada vez mais frequente.
-A ideia deste trabalho é explorar um algoritmo capaz de realizar uma análise forense simplificada de imagens, porém bastante efetiva em algumas situações. Esse algoritmo consiste em amplificar o ruído já presente na imagem, de forma que seja possível enxergar distorções na qualidade desse ruído e identificar possíveis manipulações.
+## 🎯 O Problema e o Contexto
 
- 2. Desenvolvimento: conjunto de passos a serem realizados e validação de cada passo, descrição do(s) algoritmo(s)
-1. Inicialização da Imagem de Saída:
-As imagens de entrada (in) e saída (out) são representadas como arrays unidimensionais de objetos Pixel, onde cada pixel tem componentes r (vermelho), g (verde) e b (azul).
-2. Definição e Inicialização de Variáveis para o Filtro:
-Agora, o código define o tamanho da janela como 3x3 pixels e inicializa arrays (r_vals, g_vals, b_vals) para armazenar os valores de cor dessa janela. O número de pixels é fixado em 9 (3x3).
-  
- 3. Aplicação do Filtro de Mediana
-O código então percorre cada pixel da imagem (x, y), preenchendo a janela 3x3 com os valores dos pixels ao redor (incluindo o próprio pixel central). Para garantir que o código lide com pixels nas bordas da imagem, ele utiliza verificações que limitam os índices da janela, substituindo valores fora dos limites pelos valores da borda mais próxima, conforme instrução nos slides do professor.
- 
- 4. Ordenação dos Valores para Encontrar a Mediana
-Após preencher a janela com os valores RGB, o código usa um Bubble Sort para ordenar os valores dos três canais de cor (R, G, B).
-Ao final, o valor mediano de cada canal é encontrado no meio do array ordenado.
-  
- 5. Amplificação da Diferença Entre o Pixel Central e a Mediana
-Em seguida, o código calcula a diferença entre os valores RGB do pixel central da janela e a mediana dos valores da janela. Essa diferença é amplificada por um fator ajustável (fator). Após a amplificação, os valores são limitados ao intervalo [0, 255], garantindo que estejam dentro do intervalo válido para cores.
-3. Conclusão: principais dificuldades encontradas e possíveis melhorias
-Tivemos bastante dificuldade para aplicar nossas ideias, e achar alguma maneira de começar o código. Até chegar nessa versão final, tivemos vários protótipos (incluindo um com qsort), porém ele necessitava a declaração da função fora do void processa(), o que não era permitido. Perguntamos inúmeras vezes para o professor em aula, e aos nossos colegas em busca de ideias. Múltiplas vezes a imagem de saída não era o que queríamos(às vezes ficava tudo preto, às vezes um emaranhado de cores) ou o programa simplesmente não executava. Como possíveis melhorias, nosso código poderia ter ficado mais simples.
- 
+Com o avanço das ferramentas de edição e a popularização de algoritmos de inteligência artificial (Deep Fakes, Generative AI), tornou-se um desafio complexo atestar a veracidade de uma fotografia. A utilização maliciosa dessas técnicas, especialmente na propagação de fake news, exige o desenvolvimento de métodos de verificação eficientes.
+
+O objetivo deste trabalho prático é implementar um algoritmo em **linguagem C** capaz de realizar uma análise forense digital simplificada, mas altamente efetiva. A técnica baseia-se na **amplificação do ruído intrínseco da imagem**. Como edições e manipulações tendem a alterar o padrão de ruído original de uma foto (criando discrepâncias de compressão), nosso algoritmo destaca essas distorções, tornando visível o que foi alterado artificialmente.
+
+---
+
+## ⚙️ Arquitetura e Lógica do Algoritmo
+
+O desenvolvimento do filtro foi estruturado em uma **pipeline de processamento de pixels**, operando sobre os canais **RGB**. Os passos implementados na função `processa()` foram:
+
+### 1. Inicialização e Estrutura de Dados
+
+As imagens de entrada (`in`) e saída (`out`) são manipuladas na memória como **arrays unidimensionais de objetos `Pixel`**. Cada pixel armazena individualmente seus componentes de cor:
+
+- `r` (vermelho)
+- `g` (verde)
+- `b` (azul)
+
+---
+
+### 2. Definição da Janela de Varredura (Kernel)
+
+O algoritmo utiliza uma **janela móvel de 3x3 pixels** (totalizando 9 pixels por iteração).
+
+Foram inicializados arrays específicos para armazenar os valores de cor da vizinhança do pixel central:
+
+```
+r_vals
+g_vals
+b_vals
+```
+
+---
+
+### 3. Tratamento de Bordas e Aplicação do Filtro
+
+O código percorre iterativamente cada pixel `(x, y)` da imagem.
+
+Para evitar **falhas de segmentação** ou erros ao acessar pixels nas extremidades da imagem, implementamos **verificações de limite**. Valores que "vazariam" da matriz são substituídos pelos valores da **borda mais próxima**, garantindo a integridade do processamento.
+
+---
+
+### 4. Ordenação (Bubble Sort) e Cálculo da Mediana
+
+Após popular a janela **3x3**, é necessário encontrar a cor predominante (**mediana**) para isolar o ruído.
+
+Como restrição do escopo, não pudemos utilizar funções externas como `qsort`. A solução foi implementar o algoritmo de **Bubble Sort** nativamente para ordenar os arrays de cores:
+
+- R
+- G
+- B
+
+A mediana é então extraída do **índice central do array ordenado**.
+
+---
+
+### 5. Amplificação do Ruído (Diferença)
+
+O núcleo da análise forense ocorre aqui.
+
+O algoritmo calcula a **diferença exata entre o valor RGB original do pixel central e a mediana de sua vizinhança**.
+
+Essa diferença (o **ruído**) é multiplicada por um **fator de amplificação ajustável**.
+
+Por fim, os resultados são **limitados (clamped)** ao intervalo válido de cores:
+
+```
+[0, 255]
+```
+
+Esses valores compõem a **imagem de saída**, onde possíveis manipulações tornam-se visíveis.
+
+---
+
+## 🚧 Desafios e Aprendizados
+
+A transição da teoria para a implementação prática apresentou desafios significativos de lógica e sintaxe:
+
+### Restrições de Escopo
+
+A tentativa inicial de utilizar o `qsort` esbarrou na limitação de não podermos declarar funções auxiliares fora do escopo `void processa()`. Isso exigiu a refatoração completa da lógica de ordenação para um **Bubble Sort interno**.
+
+### Depuração Visual
+
+Diferente de dados textuais, o **debug de imagens é complexo**. Enfrentamos diversas iterações onde o processamento matemático gerava outputs indesejados:
+
+- imagens totalmente pretas
+- artefatos de cor distorcidos
+
+Isso exigiu revisão minuciosa dos cálculos de **limite de matriz e RGB**.
+
+### Melhorias Futuras
+
+O código atual atende aos requisitos, mas há espaço para otimização.
+
+A **complexidade ciclomática do Bubble Sort para cada pixel** aumenta o custo computacional. Como trabalho futuro, a lógica poderia ser:
+
+- simplificada
+- vetorizada
+- paralelizada
+
+Isso permitiria processar **imagens em resoluções maiores** de forma mais performática.
+
+---
+
+## 👨🏻‍💻 Autoria
+
+Desenvolvido por **Leonardo Chiao** e **Lucas Volkweis** para o **Trabalho Prático 1** da disciplina de **Investigação Digital (Outubro, 2024)**.
